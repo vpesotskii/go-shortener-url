@@ -14,7 +14,7 @@ func handleMethod(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		addURL(w, r)
 	case http.MethodGet:
-		getUrl(w, r)
+		getURL(w, r)
 	default:
 		http.Error(w, "Method is allowed", http.StatusBadRequest)
 	}
@@ -37,7 +37,7 @@ func addURL(res http.ResponseWriter, req *http.Request) {
 }
 
 // func returns the original URL by short URL
-func getUrl(res http.ResponseWriter, req *http.Request) {
+func getURL(res http.ResponseWriter, req *http.Request) {
 	shortURL := req.URL.String()[1:]
 	if originalURL, ok := mapURLs[shortURL]; ok {
 		res.Header().Set("Location", originalURL)
