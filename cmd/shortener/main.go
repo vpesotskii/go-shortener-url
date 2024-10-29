@@ -29,15 +29,19 @@ func addUrl(res http.ResponseWriter, req *http.Request) {
 	}
 	shortUrl := encodeUrl(body)
 	mapUrls[shortUrl] = string(body)
+	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
-	res.Write([]byte(shortUrl))
+	res.Write([]byte("http://localhost:8080/" + shortUrl))
 }
 
 func getUrl(res http.ResponseWriter, req *http.Request) {
 	shortUrl := req.URL.String()[1:]
-	if s, ok := mapUrls[shortUrl]; ok {
-		res.Header().Set("Location", s)
+	if originalUrl, ok := mapUrls[shortUrl]; ok {
+		res.Header().Set("Location", originalUrl)
 		res.WriteHeader(http.StatusTemporaryRedirect)
+	} else {
+		res.Header().Set("Location", "URL not found")
+		res.WriteHeader(http.StatusBadRequest)
 	}
 }
 
