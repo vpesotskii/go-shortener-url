@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-var mapURLs = map[string]string{}
+var mapURLs map[string]string
 
 // func handles the request
 func handleMethod(w http.ResponseWriter, r *http.Request) {
@@ -24,10 +24,10 @@ func handleMethod(w http.ResponseWriter, r *http.Request) {
 // func encodes the URL from the request and put it into the map
 func addURL(res http.ResponseWriter, req *http.Request) {
 
-	body, err := io.ReadAll(req.Body)
-	if err != nil {
-		http.Error(res, err.Error(), http.StatusBadRequest)
-		return
+	body, _ := io.ReadAll(req.Body)
+	if string(body) == "" {
+		res.WriteHeader(http.StatusBadRequest)
+		res.Write([]byte("No URL in request"))
 	}
 	shortURL := encodeURL(body)
 	mapURLs[shortURL] = string(body)
@@ -39,13 +39,14 @@ func addURL(res http.ResponseWriter, req *http.Request) {
 // func returns the original URL by short URL
 func getURL(res http.ResponseWriter, req *http.Request) {
 	shortURL := req.URL.String()[1:]
-	if originalURL, ok := mapURLs[shortURL]; ok {
-		res.Header().Set("Location", originalURL)
-		res.WriteHeader(http.StatusTemporaryRedirect)
-	} else {
-		res.Header().Set("Location", "URL not found")
-		res.WriteHeader(http.StatusBadRequest)
+	if shortURL != "" {
+		if originalURL, ok := mapURLs[shortURL]; ok {
+			res.Header().Set("Location", originalURL)
+			res.WriteHeader(http.StatusTemporaryRedirect)
+		}
 	}
+	res.Header().Set("Location", "URL not found")
+	res.WriteHeader(http.StatusBadRequest)
 }
 
 // func encodes string by base64
@@ -54,6 +55,7 @@ func encodeURL(url []byte) string {
 }
 
 func main() {
+	mapURLs = make(map[string]string)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleMethod)
 	err := http.ListenAndServe(":8080", mux)
