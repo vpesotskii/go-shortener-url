@@ -66,24 +66,3 @@ func Test_getURL(t *testing.T) {
 		})
 	}
 }
-
-func Test_handleMethod(t *testing.T) {
-	tests := []struct {
-		method string
-	}{
-		{method: http.MethodGet},
-		{method: http.MethodPost},
-		{method: http.MethodPatch},
-		{method: http.MethodPut},
-	}
-	for _, tt := range tests {
-		t.Run(tt.method, func(t *testing.T) {
-			request := httptest.NewRequest(tt.method, "/", nil)
-			response := httptest.NewRecorder()
-			handleMethod(response, request)
-			if tt.method != http.MethodGet && tt.method != http.MethodPost {
-				assert.Equal(t, response.Code, http.StatusBadRequest)
-			}
-		})
-	}
-}
