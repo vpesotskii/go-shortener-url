@@ -10,7 +10,7 @@ var Options struct {
 }
 
 func ParseFlags() {
-	flag.StringVar(&Options.Server, "a", "localhost:8888", "address HTTP server")
-	flag.StringVar(&Options.BaseAddress, "b", "http://localhost:8000", "Base address")
+	flag.StringVar(&Options.Server, "a", "localhost:8080", "address HTTP server")
+	flag.StringVar(&Options.BaseAddress, "b", "http://localhost:8080", "Base address")
 	flag.Parse()
 }
