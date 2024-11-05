@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -59,9 +62,17 @@ func Test_getURL(t *testing.T) {
 					}
 				}
 			}
-			request := httptest.NewRequest(http.MethodGet, "/"+addr, nil)
+
+			req, err := http.NewRequest(http.MethodGet, "/", nil)
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("surl", addr)
+			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+			require.NoError(t, err)
+
 			response := httptest.NewRecorder()
-			getURL(response, request)
+			getURL(response, req)
+
+			require.NoError(t, err)
 			assert.Equal(t, tt.expectedCode, response.Code)
 		})
 	}

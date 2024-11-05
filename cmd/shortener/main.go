@@ -45,9 +45,10 @@ func encodeURL(url []byte) string {
 func main() {
 	mapURLs = make(map[string]string)
 	r := chi.NewRouter()
-	r.Get("/{surl}", getURL)
-	r.Post("/", addURL)
-
+	r.Route("/", func(r chi.Router) {
+		r.Get("/{surl}", getURL)
+		r.Post("/", addURL)
+	})
 	err := http.ListenAndServe(":8080", r)
 	if err != nil {
 		return
