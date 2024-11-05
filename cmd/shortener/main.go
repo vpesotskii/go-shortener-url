@@ -23,7 +23,7 @@ func addURL(res http.ResponseWriter, req *http.Request) {
 	mapURLs[shortURL] = string(body)
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
-	res.Write([]byte("http://localhost:8080/" + shortURL))
+	res.Write([]byte(config.Options.BaseAddress + "/" + shortURL))
 }
 
 // func returns the original URL by short URL
