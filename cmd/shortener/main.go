@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/base64"
+	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/vpesotskii/go-shortener-url/cmd/config"
 	"io"
 	"net/http"
 )
@@ -21,7 +23,7 @@ func addURL(res http.ResponseWriter, req *http.Request) {
 	mapURLs[shortURL] = string(body)
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
-	res.Write([]byte("http://localhost:8080/" + shortURL))
+	res.Write([]byte(config.Options.BaseAddress + "/" + shortURL))
 }
 
 // func returns the original URL by short URL
@@ -49,7 +51,10 @@ func main() {
 		r.Get("/{surl}", getURL)
 		r.Post("/", addURL)
 	})
-	err := http.ListenAndServe(":8080", r)
+	config.ParseFlags()
+	fmt.Println("Running server on", config.Options.Server)
+	fmt.Println("Base Address server: ", config.Options.BaseAddress)
+	err := http.ListenAndServe(config.Options.Server, r)
 	if err != nil {
 		return
 	}
