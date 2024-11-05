@@ -2,24 +2,12 @@ package main
 
 import (
 	"encoding/base64"
+	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
 )
 
 var mapURLs map[string]string
-
-// func handles the request
-func handleMethod(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		addURL(w, r)
-	case http.MethodGet:
-		getURL(w, r)
-	default:
-		http.Error(w, "Method is allowed", http.StatusBadRequest)
-	}
-
-}
 
 // func encodes the URL from the request and put it into the map
 func addURL(res http.ResponseWriter, req *http.Request) {
@@ -38,9 +26,9 @@ func addURL(res http.ResponseWriter, req *http.Request) {
 
 // func returns the original URL by short URL
 func getURL(res http.ResponseWriter, req *http.Request) {
-	shortURL := req.URL.String()[1:]
-	if shortURL != "" {
-		if originalURL, ok := mapURLs[shortURL]; ok {
+	surl := chi.URLParam(req, "surl")
+	if surl != "" {
+		if originalURL, ok := mapURLs[chi.URLParam(req, "surl")]; ok {
 			res.Header().Set("Location", originalURL)
 			res.WriteHeader(http.StatusTemporaryRedirect)
 		}
@@ -56,9 +44,12 @@ func encodeURL(url []byte) string {
 
 func main() {
 	mapURLs = make(map[string]string)
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", handleMethod)
-	err := http.ListenAndServe(":8080", mux)
+	r := chi.NewRouter()
+	r.Route("/", func(r chi.Router) {
+		r.Get("/{surl}", getURL)
+		r.Post("/", addURL)
+	})
+	err := http.ListenAndServe(":8080", r)
 	if err != nil {
 		return
 	}

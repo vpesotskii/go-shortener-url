@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -59,31 +62,18 @@ func Test_getURL(t *testing.T) {
 					}
 				}
 			}
-			request := httptest.NewRequest(http.MethodGet, "/"+addr, nil)
-			response := httptest.NewRecorder()
-			getURL(response, request)
-			assert.Equal(t, tt.expectedCode, response.Code)
-		})
-	}
-}
 
-func Test_handleMethod(t *testing.T) {
-	tests := []struct {
-		method string
-	}{
-		{method: http.MethodGet},
-		{method: http.MethodPost},
-		{method: http.MethodPatch},
-		{method: http.MethodPut},
-	}
-	for _, tt := range tests {
-		t.Run(tt.method, func(t *testing.T) {
-			request := httptest.NewRequest(tt.method, "/", nil)
+			req, err := http.NewRequest(http.MethodGet, "/", nil)
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("surl", addr)
+			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+			require.NoError(t, err)
+
 			response := httptest.NewRecorder()
-			handleMethod(response, request)
-			if tt.method != http.MethodGet && tt.method != http.MethodPost {
-				assert.Equal(t, response.Code, http.StatusBadRequest)
-			}
+			getURL(response, req)
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedCode, response.Code)
 		})
 	}
 }
