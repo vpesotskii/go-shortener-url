@@ -2,9 +2,10 @@ package main
 
 import (
 	"encoding/base64"
-	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/vpesotskii/go-shortener-url/cmd/config"
+	"github.com/vpesotskii/go-shortener-url/internal/app/logger"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
 )
@@ -48,13 +49,17 @@ func main() {
 	mapURLs = make(map[string]string)
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
-		r.Get("/{surl}", getURL)
-		r.Post("/", addURL)
+		r.Get("/{surl}", logger.WithLogger(getURL))
+		r.Post("/", logger.WithLogger(addURL))
 	})
 	config.ParseFlags()
-	fmt.Println("Running server on", config.Options.Server)
-	fmt.Println("Base Address server: ", config.Options.BaseAddress)
-	err := http.ListenAndServe(config.Options.Server, r)
+	err := logger.Initialize(config.Options.LogLevel)
+	if err != nil {
+		return
+	}
+	logger.Log.Info("Running server on", zap.String("server", config.Options.Server))
+	logger.Log.Info("Base address", zap.String("base address", config.Options.BaseAddress))
+	err = http.ListenAndServe(config.Options.Server, r)
 	if err != nil {
 		return
 	}
