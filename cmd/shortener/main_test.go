@@ -1,10 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vpesotskii/go-shortener-url/cmd/config"
+	"github.com/vpesotskii/go-shortener-url/internal/app/models"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -74,6 +78,45 @@ func Test_getURL(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedCode, response.Code)
+		})
+	}
+}
+
+func Test_addURLFromJson(t *testing.T) {
+
+	req := models.Request{
+		URL: "https://practicum.yandex.ru/",
+	}
+
+	resp := models.Response{
+		Result: config.Options.BaseAddress + "/" + "aHR0cHM6Ly9wcmFjdGljdW0ueWFuZGV4LnJ1Lw==",
+	}
+
+	tests := []struct {
+		name           string
+		method         string
+		expectedCode   int
+		expectedBody   models.Request
+		expectedResult models.Response
+	}{
+		{name: "Post with body", method: http.MethodPost, expectedCode: http.StatusCreated, expectedBody: req, expectedResult: resp},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			jsonBody, _ := json.Marshal(tt.expectedBody)
+			request := httptest.NewRequest(tt.method, "/api/shorten", bytes.NewBuffer(jsonBody))
+			request.Header.Set("Content-Type", "application/json")
+			response := httptest.NewRecorder()
+			addURLFromJson(response, request)
+			assert.Equal(t, tt.expectedCode, response.Code)
+
+			responseBody := response.Body.String()
+			var respJson models.Response
+			err := json.Unmarshal([]byte(responseBody), &respJson)
+			assert.NoError(t, err, "Response JSON should be valid")
+
+			assert.Equal(t, tt.expectedResult, resp, "Short URL does not match expected value")
+			assert.Equal(t, "application/json; charset=utf-8", response.Header().Get("Content-Type"), "Content-Type header mismatch")
 		})
 	}
 }
