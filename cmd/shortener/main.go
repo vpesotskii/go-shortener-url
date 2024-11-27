@@ -30,7 +30,7 @@ func addURL(res http.ResponseWriter, req *http.Request) {
 }
 
 // func encodes the URL from the request with json
-func addURLFromJson(res http.ResponseWriter, req *http.Request) {
+func addURLFromJSON(res http.ResponseWriter, req *http.Request) {
 
 	var r models.Request
 	decoder := json.NewDecoder(req.Body)
@@ -41,6 +41,7 @@ func addURLFromJson(res http.ResponseWriter, req *http.Request) {
 	}
 
 	shortURL := base64.StdEncoding.EncodeToString([]byte(r.URL))
+	mapURLs[shortURL] = r.URL
 	resp := models.Response{
 		Result: config.Options.BaseAddress + "/" + shortURL,
 	}
@@ -78,7 +79,7 @@ func main() {
 	r.Route("/", func(r chi.Router) {
 		r.Get("/{surl}", logger.WithLogger(getURL))
 		r.Post("/", logger.WithLogger(addURL))
-		r.Post("/api/shorten", logger.WithLogger(addURLFromJson))
+		r.Post("/api/shorten", logger.WithLogger(addURLFromJSON))
 	})
 	config.ParseFlags()
 	err := logger.Initialize(config.Options.LogLevel)

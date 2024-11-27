@@ -82,7 +82,7 @@ func Test_getURL(t *testing.T) {
 	}
 }
 
-func Test_addURLFromJson(t *testing.T) {
+func Test_addURLFromJSON(t *testing.T) {
 
 	req := models.Request{
 		URL: "https://practicum.yandex.ru/",
@@ -107,7 +107,7 @@ func Test_addURLFromJson(t *testing.T) {
 			request := httptest.NewRequest(tt.method, "/api/shorten", bytes.NewBuffer(jsonBody))
 			request.Header.Set("Content-Type", "application/json")
 			response := httptest.NewRecorder()
-			addURLFromJson(response, request)
+			addURLFromJSON(response, request)
 			assert.Equal(t, tt.expectedCode, response.Code)
 
 			responseBody := response.Body.String()
