@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"github.com/go-chi/chi/v5"
 	"github.com/vpesotskii/go-shortener-url/cmd/config"
 	"github.com/vpesotskii/go-shortener-url/internal/app/logger"
+	"github.com/vpesotskii/go-shortener-url/internal/app/models"
 	"go.uber.org/zap"
 	"io"
 	"net/http"
@@ -25,6 +27,32 @@ func addURL(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
 	res.Write([]byte(config.Options.BaseAddress + "/" + shortURL))
+}
+
+// func encodes the URL from the request with json
+func addURLFromJSON(res http.ResponseWriter, req *http.Request) {
+
+	var r models.Request
+	decoder := json.NewDecoder(req.Body)
+	if err := decoder.Decode(&r); err != nil {
+		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	shortURL := base64.StdEncoding.EncodeToString([]byte(r.URL))
+	mapURLs[shortURL] = r.URL
+	resp := models.Response{
+		Result: config.Options.BaseAddress + "/" + shortURL,
+	}
+
+	res.Header().Set("Content-Type", "application/json; charset=utf-8")
+	res.WriteHeader(http.StatusCreated)
+	encoder := json.NewEncoder(res)
+	if err := encoder.Encode(resp); err != nil {
+		logger.Log.Debug("cannot encode response", zap.Error(err))
+		return
+	}
 }
 
 // func returns the original URL by short URL
@@ -51,6 +79,7 @@ func main() {
 	r.Route("/", func(r chi.Router) {
 		r.Get("/{surl}", logger.WithLogger(getURL))
 		r.Post("/", logger.WithLogger(addURL))
+		r.Post("/api/shorten", logger.WithLogger(addURLFromJSON))
 	})
 	config.ParseFlags()
 	err := logger.Initialize(config.Options.LogLevel)
