@@ -111,8 +111,8 @@ func Test_addURLFromJSON(t *testing.T) {
 			assert.Equal(t, tt.expectedCode, response.Code)
 
 			responseBody := response.Body.String()
-			var respJson models.Response
-			err := json.Unmarshal([]byte(responseBody), &respJson)
+			var respJSON models.Response
+			err := json.Unmarshal([]byte(responseBody), &respJSON)
 			assert.NoError(t, err, "Response JSON should be valid")
 
 			assert.Equal(t, tt.expectedResult, resp, "Short URL does not match expected value")
