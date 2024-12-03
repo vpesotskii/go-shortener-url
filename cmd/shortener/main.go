@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
 	"github.com/vpesotskii/go-shortener-url/cmd/config"
+	"github.com/vpesotskii/go-shortener-url/internal/app/compress"
 	"github.com/vpesotskii/go-shortener-url/internal/app/logger"
 	"github.com/vpesotskii/go-shortener-url/internal/app/models"
 	"go.uber.org/zap"
@@ -24,6 +25,7 @@ func addURL(res http.ResponseWriter, req *http.Request) {
 	}
 	shortURL := encodeURL(body)
 	mapURLs[shortURL] = string(body)
+	logger.Log.Info("Body add", zap.String("body", string(body)))
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
 	res.Write([]byte(config.Options.BaseAddress + "/" + shortURL))
@@ -41,6 +43,7 @@ func addURLFromJSON(res http.ResponseWriter, req *http.Request) {
 	}
 
 	shortURL := base64.StdEncoding.EncodeToString([]byte(r.URL))
+	logger.Log.Info("Body URL", zap.String("body", r.URL))
 	mapURLs[shortURL] = r.URL
 	resp := models.Response{
 		Result: config.Options.BaseAddress + "/" + shortURL,
@@ -77,9 +80,9 @@ func main() {
 	mapURLs = make(map[string]string)
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
-		r.Get("/{surl}", logger.WithLogger(getURL))
-		r.Post("/", logger.WithLogger(addURL))
-		r.Post("/api/shorten", logger.WithLogger(addURLFromJSON))
+		r.Get("/{surl}", logger.WithLogger(compress.GzipMiddleware(getURL)))
+		r.Post("/", logger.WithLogger(compress.GzipMiddleware(addURL)))
+		r.Post("/api/shorten", logger.WithLogger(compress.GzipMiddleware(addURLFromJSON)))
 	})
 	config.ParseFlags()
 	err := logger.Initialize(config.Options.LogLevel)
