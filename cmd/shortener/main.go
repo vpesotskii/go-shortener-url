@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
 	"github.com/vpesotskii/go-shortener-url/cmd/config"
+	"github.com/vpesotskii/go-shortener-url/internal/app/compress"
 	"github.com/vpesotskii/go-shortener-url/internal/app/logger"
 	"github.com/vpesotskii/go-shortener-url/internal/app/models"
 	"go.uber.org/zap"
@@ -77,9 +78,9 @@ func main() {
 	mapURLs = make(map[string]string)
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
-		r.Get("/{surl}", logger.WithLogger(getURL))
-		r.Post("/", logger.WithLogger(addURL))
-		r.Post("/api/shorten", logger.WithLogger(addURLFromJSON))
+		r.Get("/{surl}", logger.WithLogger(compress.GzipMiddleware(getURL)))
+		r.Post("/", logger.WithLogger(compress.GzipMiddleware(addURL)))
+		r.Post("/api/shorten", logger.WithLogger(compress.GzipMiddleware(addURLFromJSON)))
 	})
 	config.ParseFlags()
 	err := logger.Initialize(config.Options.LogLevel)
