@@ -25,6 +25,7 @@ func addURL(res http.ResponseWriter, req *http.Request) {
 	}
 	shortURL := encodeURL(body)
 	mapURLs[shortURL] = string(body)
+	logger.Log.Info("Body add", zap.String("body", string(body)))
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
 	res.Write([]byte(config.Options.BaseAddress + "/" + shortURL))
@@ -42,6 +43,7 @@ func addURLFromJSON(res http.ResponseWriter, req *http.Request) {
 	}
 
 	shortURL := base64.StdEncoding.EncodeToString([]byte(r.URL))
+	logger.Log.Info("Body URL", zap.String("body", r.URL))
 	mapURLs[shortURL] = r.URL
 	resp := models.Response{
 		Result: config.Options.BaseAddress + "/" + shortURL,
