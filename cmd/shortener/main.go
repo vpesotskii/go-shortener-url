@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/base64"
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
@@ -11,6 +12,7 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"net/http"
+	"os"
 )
 
 var mapURLs map[string]string
@@ -25,6 +27,7 @@ func addURL(res http.ResponseWriter, req *http.Request) {
 	}
 	shortURL := encodeURL(body)
 	mapURLs[shortURL] = string(body)
+	saveToFile(string(body), shortURL)
 	logger.Log.Info("Body add", zap.String("body", string(body)))
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
@@ -45,6 +48,7 @@ func addURLFromJSON(res http.ResponseWriter, req *http.Request) {
 	shortURL := base64.StdEncoding.EncodeToString([]byte(r.URL))
 	logger.Log.Info("Body URL", zap.String("body", r.URL))
 	mapURLs[shortURL] = r.URL
+	saveToFile(r.URL, shortURL)
 	resp := models.Response{
 		Result: config.Options.BaseAddress + "/" + shortURL,
 	}
@@ -76,6 +80,45 @@ func encodeURL(url []byte) string {
 	return base64.StdEncoding.EncodeToString(url)
 }
 
+func saveToFile(originalURL string, shortURL string) {
+	file, err := os.OpenFile(config.Options.FileStorage, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
+	if err != nil {
+		logger.Log.Debug("cannot open file", zap.Error(err))
+		return
+	}
+	defer file.Close()
+
+	rowNumber := 1
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		rowNumber++
+	}
+	if err := scanner.Err(); err != nil {
+		logger.Log.Debug("Error Reading", zap.Error(err))
+	}
+
+	fileRecord := models.FileRecord{
+		UUID:        rowNumber,
+		OriginalURL: originalURL,
+		ShortURL:    shortURL,
+	}
+	data, err := json.Marshal(fileRecord)
+	if err != nil {
+		return
+	}
+
+	_, err = file.Write(data)
+	if err != nil {
+		logger.Log.Debug("cannot write into file", zap.Error(err))
+		return
+	}
+	_, err = file.WriteString("\n")
+	if err != nil {
+		return
+	}
+	logger.Log.Info("Data successfully appended to ", zap.String("file", config.Options.FileStorage))
+}
+
 func main() {
 	mapURLs = make(map[string]string)
 	r := chi.NewRouter()
@@ -91,6 +134,7 @@ func main() {
 	}
 	logger.Log.Info("Running server on", zap.String("server", config.Options.Server))
 	logger.Log.Info("Base address", zap.String("base address", config.Options.BaseAddress))
+	logger.Log.Info("File Storage Path", zap.String("file", config.Options.FileStorage))
 	err = http.ListenAndServe(config.Options.Server, r)
 	if err != nil {
 		return

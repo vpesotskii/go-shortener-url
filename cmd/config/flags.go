@@ -9,12 +9,14 @@ var Options struct {
 	Server      string
 	BaseAddress string
 	LogLevel    string
+	FileStorage string
 }
 
 func ParseFlags() {
 	flag.StringVar(&Options.Server, "a", "localhost:8080", "address HTTP server")
 	flag.StringVar(&Options.BaseAddress, "b", "http://localhost:8080", "Base address")
 	flag.StringVar(&Options.LogLevel, "l", "info", "Log level")
+	flag.StringVar(&Options.FileStorage, "f", "/tmp/short-url-db.json", "File storage location")
 	flag.Parse()
 
 	if envRunAddr := os.Getenv("SERVER_ADDRESS"); envRunAddr != "" {
@@ -25,5 +27,8 @@ func ParseFlags() {
 	}
 	if envLogLevel := os.Getenv("LOG_LEVEL"); envLogLevel != "" {
 		Options.LogLevel = envLogLevel
+	}
+	if envFileStorage := os.Getenv("FILE_STORAGE_PATH"); envFileStorage != "" {
+		Options.FileStorage = envFileStorage
 	}
 }
