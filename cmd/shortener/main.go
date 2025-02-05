@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
@@ -13,6 +14,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 var mapURLs map[string]string
@@ -75,6 +78,25 @@ func getURL(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusBadRequest)
 }
 
+// func checks the DB connection
+func checkDBConnection(res http.ResponseWriter, req *http.Request) {
+
+	db, err := sql.Open("pgx", config.Options.DBUrl)
+	if err != nil {
+		panic(err)
+	}
+
+	defer db.Close()
+
+	err = db.Ping()
+	if err != nil {
+		logger.Log.Info("Not Connected: ", zap.Error(err))
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	res.WriteHeader(http.StatusOK)
+}
+
 // func encodes string by base64
 func encodeURL(url []byte) string {
 	return base64.StdEncoding.EncodeToString(url)
@@ -126,6 +148,7 @@ func main() {
 		r.Get("/{surl}", logger.WithLogger(compress.GzipMiddleware(getURL)))
 		r.Post("/", logger.WithLogger(compress.GzipMiddleware(addURL)))
 		r.Post("/api/shorten", logger.WithLogger(compress.GzipMiddleware(addURLFromJSON)))
+		r.Get("/ping", logger.WithLogger(compress.GzipMiddleware(checkDBConnection)))
 	})
 	config.ParseFlags()
 	err := logger.Initialize(config.Options.LogLevel)
@@ -135,6 +158,7 @@ func main() {
 	logger.Log.Info("Running server on", zap.String("server", config.Options.Server))
 	logger.Log.Info("Base address", zap.String("base address", config.Options.BaseAddress))
 	logger.Log.Info("File Storage Path", zap.String("file", config.Options.FileStorage))
+	logger.Log.Info("Database Connection", zap.String("db connection", config.Options.DBUrl))
 	err = http.ListenAndServe(config.Options.Server, r)
 	if err != nil {
 		return
