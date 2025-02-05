@@ -10,6 +10,7 @@ var Options struct {
 	BaseAddress string
 	LogLevel    string
 	FileStorage string
+	DBUrl       string
 }
 
 func ParseFlags() {
@@ -17,6 +18,7 @@ func ParseFlags() {
 	flag.StringVar(&Options.BaseAddress, "b", "http://localhost:8080", "Base address")
 	flag.StringVar(&Options.LogLevel, "l", "info", "Log level")
 	flag.StringVar(&Options.FileStorage, "f", "/tmp/short-url-db.json", "File storage location")
+	flag.StringVar(&Options.DBUrl, "d", "host=localhost port=5432 user=postgres password=admin dbname=go sslmode=disable", "Database address")
 	flag.Parse()
 
 	if envRunAddr := os.Getenv("SERVER_ADDRESS"); envRunAddr != "" {
@@ -30,5 +32,8 @@ func ParseFlags() {
 	}
 	if envFileStorage := os.Getenv("FILE_STORAGE_PATH"); envFileStorage != "" {
 		Options.FileStorage = envFileStorage
+	}
+	if envDBUrl := os.Getenv("DATABASE_DSN"); envDBUrl != "" {
+		Options.DBUrl = envDBUrl
 	}
 }
