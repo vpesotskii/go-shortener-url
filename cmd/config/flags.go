@@ -17,8 +17,8 @@ func ParseFlags() {
 	flag.StringVar(&Options.Server, "a", "localhost:8080", "address HTTP server")
 	flag.StringVar(&Options.BaseAddress, "b", "http://localhost:8080", "Base address")
 	flag.StringVar(&Options.LogLevel, "l", "info", "Log level")
-	flag.StringVar(&Options.FileStorage, "f", "/tmp/short-url-db.json", "File storage location")
-	flag.StringVar(&Options.DBUrl, "d", "host=localhost port=5432 user=postgres password=admin dbname=go sslmode=disable", "Database address")
+	flag.StringVar(&Options.FileStorage, "f", "./short-url-db.json", "File storage location")
+	flag.StringVar(&Options.DBUrl, "d", "", "Database address") // host=localhost port=5432 user=postgres password=admin dbname=go sslmode=disable
 	flag.Parse()
 
 	if envRunAddr := os.Getenv("SERVER_ADDRESS"); envRunAddr != "" {

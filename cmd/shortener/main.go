@@ -1,154 +1,46 @@
 package main
 
 import (
-	"bufio"
-	"database/sql"
-	"encoding/base64"
-	"encoding/json"
 	"github.com/go-chi/chi/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/vpesotskii/go-shortener-url/cmd/config"
 	"github.com/vpesotskii/go-shortener-url/internal/app/compress"
+	"github.com/vpesotskii/go-shortener-url/internal/app/handlers"
 	"github.com/vpesotskii/go-shortener-url/internal/app/logger"
 	"github.com/vpesotskii/go-shortener-url/internal/app/models"
+	"github.com/vpesotskii/go-shortener-url/internal/app/storage"
 	"go.uber.org/zap"
-	"io"
 	"net/http"
 	"os"
-
-	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-var mapURLs map[string]string
-
-// func encodes the URL from the request and put it into the map
-func addURL(res http.ResponseWriter, req *http.Request) {
-
-	body, _ := io.ReadAll(req.Body)
-	if string(body) == "" {
-		res.WriteHeader(http.StatusBadRequest)
-		res.Write([]byte("No URL in request"))
-	}
-	shortURL := encodeURL(body)
-	mapURLs[shortURL] = string(body)
-	saveToFile(string(body), shortURL)
-	logger.Log.Info("Body add", zap.String("body", string(body)))
-	res.Header().Set("Content-Type", "text/plain")
-	res.WriteHeader(http.StatusCreated)
-	res.Write([]byte(config.Options.BaseAddress + "/" + shortURL))
-}
-
-// func encodes the URL from the request with json
-func addURLFromJSON(res http.ResponseWriter, req *http.Request) {
-
-	var r models.Request
-	decoder := json.NewDecoder(req.Body)
-	if err := decoder.Decode(&r); err != nil {
-		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
-		res.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	shortURL := base64.StdEncoding.EncodeToString([]byte(r.URL))
-	logger.Log.Info("Body URL", zap.String("body", r.URL))
-	mapURLs[shortURL] = r.URL
-	saveToFile(r.URL, shortURL)
-	resp := models.Response{
-		Result: config.Options.BaseAddress + "/" + shortURL,
-	}
-
-	res.Header().Set("Content-Type", "application/json; charset=utf-8")
-	res.WriteHeader(http.StatusCreated)
-	encoder := json.NewEncoder(res)
-	if err := encoder.Encode(resp); err != nil {
-		logger.Log.Debug("cannot encode response", zap.Error(err))
-		return
-	}
-}
-
-// func returns the original URL by short URL
-func getURL(res http.ResponseWriter, req *http.Request) {
-	surl := chi.URLParam(req, "surl")
-	if surl != "" {
-		if originalURL, ok := mapURLs[chi.URLParam(req, "surl")]; ok {
-			res.Header().Set("Location", originalURL)
-			res.WriteHeader(http.StatusTemporaryRedirect)
-		}
-	}
-	res.Header().Set("Location", "URL not found")
-	res.WriteHeader(http.StatusBadRequest)
-}
-
-// func checks the DB connection
-func checkDBConnection(res http.ResponseWriter, req *http.Request) {
-
-	db, err := sql.Open("pgx", config.Options.DBUrl)
-	if err != nil {
-		panic(err)
-	}
-
-	defer db.Close()
-
-	err = db.Ping()
-	if err != nil {
-		logger.Log.Info("Not Connected: ", zap.Error(err))
-		res.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	res.WriteHeader(http.StatusOK)
-}
-
-// func encodes string by base64
-func encodeURL(url []byte) string {
-	return base64.StdEncoding.EncodeToString(url)
-}
-
-func saveToFile(originalURL string, shortURL string) {
-	file, err := os.OpenFile(config.Options.FileStorage, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
-	if err != nil {
-		logger.Log.Debug("cannot open file", zap.Error(err))
-		return
-	}
-	defer file.Close()
-
-	rowNumber := 1
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		rowNumber++
-	}
-	if err := scanner.Err(); err != nil {
-		logger.Log.Debug("Error Reading", zap.Error(err))
-	}
-
-	fileRecord := models.FileRecord{
-		UUID:        rowNumber,
-		OriginalURL: originalURL,
-		ShortURL:    shortURL,
-	}
-	data, err := json.Marshal(fileRecord)
-	if err != nil {
-		return
-	}
-
-	_, err = file.Write(data)
-	if err != nil {
-		logger.Log.Debug("cannot write into file", zap.Error(err))
-		return
-	}
-	_, err = file.WriteString("\n")
-	if err != nil {
-		return
-	}
-	logger.Log.Info("Data successfully appended to ", zap.String("file", config.Options.FileStorage))
-}
-
 func main() {
-	mapURLs = make(map[string]string)
+
+	var db storage.Repository
+
+	//Обертки для handlers, чтобы использовать их в роутере
+	AddURLHandlerWrapper := func(res http.ResponseWriter, req *http.Request) {
+		handlers.AddURL(db, res, req)
+	}
+
+	AddURLFromJSONHandlerWrapper := func(res http.ResponseWriter, req *http.Request) {
+		handlers.AddURLFromJSON(db, res, req)
+	}
+
+	GetURLHandlerWrapper := func(res http.ResponseWriter, req *http.Request) {
+		handlers.GetURL(db, res, req)
+	}
+
+	PingHandlerWrapper := func(res http.ResponseWriter, req *http.Request) {
+		handlers.Ping(db, res, req)
+	}
+
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
-		r.Get("/{surl}", logger.WithLogger(compress.GzipMiddleware(getURL)))
-		r.Post("/", logger.WithLogger(compress.GzipMiddleware(addURL)))
-		r.Post("/api/shorten", logger.WithLogger(compress.GzipMiddleware(addURLFromJSON)))
-		r.Get("/ping", logger.WithLogger(compress.GzipMiddleware(checkDBConnection)))
+		r.Get("/{surl}", logger.WithLogger(compress.GzipMiddleware(GetURLHandlerWrapper)))
+		r.Post("/", logger.WithLogger(compress.GzipMiddleware(AddURLHandlerWrapper)))
+		r.Post("/api/shorten", logger.WithLogger(compress.GzipMiddleware(AddURLFromJSONHandlerWrapper)))
+		r.Get("/ping", logger.WithLogger(compress.GzipMiddleware(PingHandlerWrapper)))
 	})
 	config.ParseFlags()
 	err := logger.Initialize(config.Options.LogLevel)
@@ -159,6 +51,34 @@ func main() {
 	logger.Log.Info("Base address", zap.String("base address", config.Options.BaseAddress))
 	logger.Log.Info("File Storage Path", zap.String("file", config.Options.FileStorage))
 	logger.Log.Info("Database Connection", zap.String("db connection", config.Options.DBUrl))
+
+	switch config.Options.DBUrl {
+	case "":
+		file, err := os.OpenFile(config.Options.FileStorage, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
+		if err != nil {
+			logger.Log.Fatal("Error during opening file with shorten urls: %v", zap.Error(err))
+		}
+		database := storage.NewStorage(map[string]models.URL{})
+		database.SetFile(file)
+
+		err = database.FillFromFile(file)
+		if err != nil {
+			logger.Log.Info("Error during filling file with shorten urls: %v", zap.Error(err))
+		}
+		file.Close()
+
+		db = database
+
+	default:
+		database, err := storage.NewDatabase(config.Options.DBUrl)
+		if err != nil {
+			logger.Log.Fatal("Error during creating database with shorten urls: %v", zap.Error(err))
+		}
+		defer database.DB.Close()
+
+		db = database
+	}
+
 	err = http.ListenAndServe(config.Options.Server, r)
 	if err != nil {
 		return
