@@ -3,7 +3,9 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"github.com/vpesotskii/go-shortener-url/internal/app/logger"
 	"github.com/vpesotskii/go-shortener-url/internal/app/models"
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -31,6 +33,7 @@ func NewDatabase(dbConfig string) (*DsStorageAdapter, error) {
 }
 
 func (db *DsStorageAdapter) Create(record *models.URL) error {
+	logger.Log.Info("insert row", zap.String("short", record.ShortURL), zap.String("original", record.OriginalURL))
 	_, err := db.DB.ExecContext(context.Background(),
 		"INSERT INTO shorten_urls (short_url, original_url) VALUES ($1, $2);",
 		record.ShortURL,
@@ -47,7 +50,7 @@ func (db *DsStorageAdapter) GetByID(url string) (models.URL, bool) {
 		ID      string
 		FullURL string
 	)
-
+	logger.Log.Info("select row", zap.String("url", url))
 	row := db.DB.QueryRowContext(context.Background(),
 		"SELECT uuid, short_url, original_url FROM shorten_urls WHERE short_url = $1", url)
 
@@ -55,7 +58,7 @@ func (db *DsStorageAdapter) GetByID(url string) (models.URL, bool) {
 	if err != nil {
 		return models.URL{}, false
 	}
-
+	logger.Log.Info("selected row", zap.String("ID", ID), zap.String("FullURL", FullURL))
 	result := models.URL{
 		UUID:        UUID,
 		OriginalURL: ID,
