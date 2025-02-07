@@ -14,10 +14,10 @@ type URL struct {
 	OriginalURL string `json:"original_url"`
 }
 
-func NewURL(id int, short_url string, original_url string) *URL {
+func NewURL(id int, shortURL string, originalURL string) *URL {
 	return &URL{
 		UUID:        id,
-		ShortURL:    short_url,
-		OriginalURL: original_url,
+		ShortURL:    shortURL,
+		OriginalURL: originalURL,
 	}
 }
