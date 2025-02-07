@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/vpesotskii/go-shortener-url/internal/app/logger"
 	"github.com/vpesotskii/go-shortener-url/internal/app/models"
 	"go.uber.org/zap"
@@ -38,8 +39,7 @@ func (db *DsStorageAdapter) Create(record *models.URL) error {
 		return err
 	}
 	logger.Log.Info("insert row", zap.String("short", record.ShortURL), zap.String("original", record.OriginalURL))
-	_, err = db.DB.ExecContext(context.Background(),
-		"INSERT INTO shorten_urls (short_url, original_url) VALUES ($1, $2);",
+	_, err = db.DB.Exec(`INSERT INTO shorten_urls (short_url, original_url) VALUES ($1, $2);`,
 		record.ShortURL,
 		record.OriginalURL)
 	if err != nil {
@@ -56,11 +56,12 @@ func (db *DsStorageAdapter) GetByID(url string) (models.URL, bool) {
 		FullURL string
 	)
 	logger.Log.Info("select row", zap.String("url", url))
-	row := db.DB.QueryRowContext(context.Background(),
-		"SELECT uuid, short_url, original_url FROM shorten_urls WHERE short_url = $1", url)
+	row := db.DB.QueryRow(
+		`SELECT uuid, short_url, original_url FROM shorten_urls WHERE short_url = $1`, url)
 
 	err := row.Scan(&UUID, &ID, &FullURL)
 	if err != nil {
+		logger.Log.Debug(err.Error())
 		return models.URL{}, false
 	}
 	logger.Log.Info("selected row", zap.String("ID", ID), zap.String("FullURL", FullURL))
