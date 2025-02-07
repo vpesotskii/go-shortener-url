@@ -33,15 +33,20 @@ func NewDatabase(dbConfig string) (*DsStorageAdapter, error) {
 }
 
 func (db *DsStorageAdapter) Create(record *models.URL) error {
+	tx, err := db.DB.Begin()
+	if err != nil {
+		return err
+	}
 	logger.Log.Info("insert row", zap.String("short", record.ShortURL), zap.String("original", record.OriginalURL))
-	_, err := db.DB.ExecContext(context.Background(),
+	_, err = db.DB.ExecContext(context.Background(),
 		"INSERT INTO shorten_urls (short_url, original_url) VALUES ($1, $2);",
 		record.ShortURL,
 		record.OriginalURL)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
-	return nil
+	return tx.Commit()
 }
 
 func (db *DsStorageAdapter) GetByID(url string) (models.URL, bool) {
