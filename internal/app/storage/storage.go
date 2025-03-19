@@ -16,6 +16,11 @@ type Storage struct {
 	scan *bufio.Scanner
 }
 
+func (s *Storage) InsertBatch(records []models.BatchRequest) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 func NewStorage(db map[string]models.URL) *Storage {
 	return &Storage{
 		db: db,
@@ -26,6 +31,7 @@ type Repository interface {
 	Create(record *models.URL) error
 	GetByID(id string) (models.URL, bool)
 	Ping() error
+	InsertBatch(records []models.BatchRequest) error
 }
 
 func (s *Storage) SetFile(f *os.File) {

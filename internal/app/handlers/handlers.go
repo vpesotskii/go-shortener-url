@@ -91,3 +91,51 @@ func Ping(db storage.Repository, res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusOK)
 	}
 }
+
+func Batch(db storage.Repository, res http.ResponseWriter, req *http.Request) {
+
+	body, _ := io.ReadAll(req.Body)
+	if string(body) == "" {
+		res.WriteHeader(http.StatusBadRequest)
+		res.Write([]byte("Empty Batch"))
+	}
+
+	var r []models.BatchRequest
+	err := json.Unmarshal(body, &r)
+	if err != nil {
+		logger.Log.Info("Error decoding JSON:", zap.Error(err))
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	for i := range r {
+		r[i].ShortURL = base64.StdEncoding.EncodeToString([]byte(r[i].OriginalURL))
+	}
+
+	err = db.InsertBatch(r)
+	if err != nil {
+		logger.Log.Debug("Cannot Insert Batch in Storage", zap.Error(err))
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	var modifiedResponse []map[string]interface{}
+	for _, r := range r {
+		modifiedResponse = append(modifiedResponse, map[string]interface{}{
+			"correlation_id": r.CorrelationID,
+			"original_url":   r.OriginalURL,
+		})
+	}
+
+	// Send response with updated requests
+	response, err := json.Marshal(modifiedResponse)
+	if err != nil {
+		logger.Log.Debug("Error encoding response:", zap.Error(err))
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusOK)
+	res.Write(response)
+}

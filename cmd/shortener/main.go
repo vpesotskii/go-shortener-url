@@ -35,12 +35,17 @@ func main() {
 		handlers.Ping(db, res, req)
 	}
 
+	BatchURLHandlerWrapper := func(res http.ResponseWriter, req *http.Request) {
+		handlers.Batch(db, res, req)
+	}
+
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
 		r.Get("/{surl}", logger.WithLogger(compress.GzipMiddleware(GetURLHandlerWrapper)))
 		r.Post("/", logger.WithLogger(compress.GzipMiddleware(AddURLHandlerWrapper)))
 		r.Post("/api/shorten", logger.WithLogger(compress.GzipMiddleware(AddURLFromJSONHandlerWrapper)))
 		r.Get("/ping", logger.WithLogger(compress.GzipMiddleware(PingHandlerWrapper)))
+		r.Post("/api/shorten/batch", logger.WithLogger(compress.GzipMiddleware(BatchURLHandlerWrapper)))
 	})
 	config.ParseFlags()
 	err := logger.Initialize(config.Options.LogLevel)

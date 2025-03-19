@@ -78,3 +78,22 @@ func (db *DsStorageAdapter) Ping() error {
 	defer cancel()
 	return db.DB.PingContext(ctx)
 }
+
+func (db *DsStorageAdapter) InsertBatch(records []models.BatchRequest) error {
+	tx, err := db.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	for _, record := range records {
+		logger.Log.Info("insert row from Batch", zap.String("short", record.ShortURL), zap.String("original", record.OriginalURL))
+		_, err = db.DB.Exec(`INSERT INTO shorten_urls (short_url, original_url) VALUES ($1, $2);`,
+			record.ShortURL,
+			record.OriginalURL)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit()
+}

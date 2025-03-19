@@ -8,6 +8,12 @@ type Response struct {
 	Result string `json:"result"`
 }
 
+type BatchRequest struct {
+	CorrelationID int    `json:"correlation_id"`
+	ShortURL      string `json:"short_url,omitempty"`
+	OriginalURL   string `json:"original_url"`
+}
+
 type URL struct {
 	UUID        int    `json:"uuid"`
 	ShortURL    string `json:"short_url"`
