@@ -47,7 +47,7 @@ func main() {
 	if err != nil {
 		return
 	}
-	logger.Log.Info("Running server on", zap.String("server", config.Options.Server))
+	logger.Log.Info("Running server on1", zap.String("server", config.Options.Server))
 	logger.Log.Info("Base address", zap.String("base address", config.Options.BaseAddress))
 	logger.Log.Info("File Storage Path", zap.String("file", config.Options.FileStorage))
 	logger.Log.Info("Database Connection", zap.String("db connection", config.Options.DBUrl))
