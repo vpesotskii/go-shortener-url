@@ -23,7 +23,7 @@ func NewDatabase(dbConfig string) (*DsStorageAdapter, error) {
 	_, err = db.ExecContext(context.Background(),
 		`CREATE TABLE IF NOT EXISTS shorten_urls (
 		"uuid" SERIAL PRIMARY KEY,
-		"short_url" VARCHAR(50),
+		"short_url" VARCHAR(100),
 		"original_url" TEXT
 	)`)
 	if err != nil {
@@ -92,6 +92,7 @@ func (db *DsStorageAdapter) InsertBatch(records []models.BatchRequest) error {
 			record.OriginalURL)
 		if err != nil {
 			tx.Rollback()
+			logger.Log.Info("Error query:", zap.Error(err))
 			return err
 		}
 	}
