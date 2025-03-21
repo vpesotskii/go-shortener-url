@@ -23,7 +23,7 @@ func NewDatabase(dbConfig string) (*DsStorageAdapter, error) {
 	_, err = db.ExecContext(context.Background(),
 		`CREATE TABLE IF NOT EXISTS shorten_urls (
 		"uuid" SERIAL PRIMARY KEY,
-		"short_url" VARCHAR(50),
+		"short_url" VARCHAR(100),
 		"original_url" TEXT
 	)`)
 	if err != nil {
@@ -67,8 +67,8 @@ func (db *DsStorageAdapter) GetByID(url string) (models.URL, bool) {
 	logger.Log.Info("selected row", zap.String("ID", ID), zap.String("FullURL", FullURL))
 	result := models.URL{
 		UUID:        UUID,
-		OriginalURL: ID,
-		ShortURL:    FullURL,
+		OriginalURL: FullURL,
+		ShortURL:    ID,
 	}
 	return result, true
 }
@@ -77,4 +77,24 @@ func (db *DsStorageAdapter) Ping() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	return db.DB.PingContext(ctx)
+}
+
+func (db *DsStorageAdapter) InsertBatch(records []models.BatchRequest) error {
+	tx, err := db.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	for _, record := range records {
+		logger.Log.Info("insert row from Batch", zap.String("short", record.ShortURL), zap.String("original", record.OriginalURL))
+		_, err = db.DB.Exec(`INSERT INTO shorten_urls (short_url, original_url) VALUES ($1, $2);`,
+			record.ShortURL,
+			record.OriginalURL)
+		if err != nil {
+			tx.Rollback()
+			logger.Log.Info("Error query:", zap.Error(err))
+			return err
+		}
+	}
+	return tx.Commit()
 }
