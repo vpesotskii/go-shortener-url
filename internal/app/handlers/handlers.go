@@ -124,7 +124,7 @@ func Batch(db storage.Repository, res http.ResponseWriter, req *http.Request) {
 	for _, r := range r {
 		modifiedResponse = append(modifiedResponse, map[string]interface{}{
 			"correlation_id": r.CorrelationID,
-			"original_url":   r.OriginalURL,
+			"original_url":   config.Options.BaseAddress + "/" + r.ShortURL,
 		})
 	}
 
