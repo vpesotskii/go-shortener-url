@@ -95,6 +95,7 @@ func Ping(db storage.Repository, res http.ResponseWriter, req *http.Request) {
 func Batch(db storage.Repository, res http.ResponseWriter, req *http.Request) {
 
 	body, _ := io.ReadAll(req.Body)
+	logger.Log.Info("Request: ", zap.String("body", string(body)))
 	if string(body) == "" {
 		res.WriteHeader(http.StatusBadRequest)
 		res.Write([]byte("Empty Batch"))
