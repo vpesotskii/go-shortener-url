@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"net/http"
+	"strings"
 )
 
 // func returns the original URL by short URL
@@ -109,7 +110,7 @@ func Batch(db storage.Repository, res http.ResponseWriter, req *http.Request) {
 	}
 
 	for i := range r {
-		r[i].ShortURL = base64.StdEncoding.EncodeToString([]byte(r[i].OriginalURL))
+		r[i].ShortURL = ShortenURL(r[i].OriginalURL, 49)
 	}
 
 	err = db.InsertBatch(r)
@@ -138,4 +139,13 @@ func Batch(db storage.Repository, res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusCreated)
 	res.Write(response)
+}
+
+func ShortenURL(url string, length int) string {
+	encoded := base64.URLEncoding.EncodeToString([]byte(url)) // URL-safe Base64
+	encoded = strings.TrimRight(encoded, "=")                 // Remove padding
+	if len(encoded) > length {
+		return encoded[:length] // Trim to desired length
+	}
+	return encoded
 }
