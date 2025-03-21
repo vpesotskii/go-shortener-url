@@ -67,8 +67,8 @@ func (db *DsStorageAdapter) GetByID(url string) (models.URL, bool) {
 	logger.Log.Info("selected row", zap.String("ID", ID), zap.String("FullURL", FullURL))
 	result := models.URL{
 		UUID:        UUID,
-		OriginalURL: ID,
-		ShortURL:    FullURL,
+		OriginalURL: FullURL,
+		ShortURL:    ID,
 	}
 	return result, true
 }
